@@ -1,237 +1,263 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.util.ArrayList;
 
 public class MainApp extends JFrame {
 
     private Poll poll;
     private Voter voter;
 
-    private ChartPanel chartPanel;
-    private JTable table;
-    private DefaultTableModel tableModel;
+    private JTextField txtQuestion;
+    private JTextField txtNewOption;
 
-    private JPanel optionsButtonPanel;
-    private JTextField questionField;
-    private JTextField optionField;
+    private JPanel panelOptions;
+    private ChartPanel chartPanel;
+
+    private DefaultTableModel tableModel;
+    private JTable table;
+
+    private ArrayList<String> options = new ArrayList<>();
 
     public MainApp() {
-        login();
-        initPoll();
-        initGUI();
-
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                try {
-                    poll.saveToFile(new File("autosave_poll.txt"));
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                }
-            }
-        });
-    }
-
-    private void login() {
-        String name = JOptionPane.showInputDialog(
-                null,
-                "Masukkan nama Anda:",
-                "Login",
-                JOptionPane.QUESTION_MESSAGE
-        );
-
-        if (name == null || name.trim().isEmpty()) {
-            System.exit(0);
-        }
-        voter = new Voter(name);
-    }
-
-    private void initPoll() {
-        File f = new File("autosave_poll.txt");
-        if (f.exists()) {
-            try {
-                poll = Poll.loadFromFile(f);
-                return;
-            } catch (IOException ignored) {}
-        }
-        poll = new Poll("Masukkan pertanyaan polling", new String[]{});
-    }
-
-    private void initGUI() {
-        setTitle("Sistem Voting");
-        setSize(1000, 700);
+        setTitle("Sistem Voting - Input Manual & Tombol");
+        setSize(1100, 650);
+        setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        add(createTop(), BorderLayout.NORTH);
-        add(createCenter(), BorderLayout.CENTER);
-        add(createBottom(), BorderLayout.SOUTH);
+        voter = new Voter("user1");
+        poll = new Poll("Masukkan pertanyaan polling", new String[]{});
 
-        setLocationRelativeTo(null);
-        setVisible(true);
+        add(createHeader(), BorderLayout.NORTH);
+        add(createMainPanel(), BorderLayout.CENTER);
+        add(createBottomPanel(), BorderLayout.SOUTH);
     }
 
-    private JPanel createTop() {
-        JPanel p = new JPanel();
-        p.setBackground(new Color(52, 152, 219));
-        JLabel l = new JLabel("SISTEM VOTING OOP JAVA", SwingConstants.CENTER);
-        l.setForeground(Color.WHITE);
-        l.setFont(new Font("Arial", Font.BOLD, 22));
-        p.add(l);
-        return p;
+    private JPanel createHeader() {
+        JPanel header = new JPanel();
+        header.setBackground(new Color(52, 152, 219));
+        JLabel title = new JLabel("SISTEM VOTING - INPUT MANUAL & TOMBOL PILIHAN");
+        title.setForeground(Color.WHITE);
+        title.setFont(new Font("Arial", Font.BOLD, 20));
+        header.add(title);
+        return header;
     }
 
-    private JPanel createCenter() {
-        JPanel center = new JPanel(new GridLayout(1, 2));
-        center.add(createVotePanel());
-        center.add(createResultPanel());
-        return center;
+    private JPanel createMainPanel() {
+        JPanel main = new JPanel(new GridLayout(1, 2, 10, 0));
+        main.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        main.add(createLeftPanel());
+        main.add(createRightPanel());
+        return main;
     }
 
-    private JPanel createVotePanel() {
-        JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBorder(BorderFactory.createTitledBorder("Voting"));
+    // ================= LEFT =================
+    private JPanel createLeftPanel() {
+        JPanel left = new JPanel(new BorderLayout(10, 10));
 
-        questionField = new JTextField(poll.getQuestion(), 25);
-        JButton updateQ = new JButton("Update");
-        updateQ.addActionListener(e -> updateQuestion());
+        left.add(createSetupPanel(), BorderLayout.NORTH);
+        left.add(createOptionPanel(), BorderLayout.CENTER);
 
-        JPanel qPanel = new JPanel();
-        qPanel.add(new JLabel("Pertanyaan:"));
-        qPanel.add(questionField);
-        qPanel.add(updateQ);
-
-        optionField = new JTextField(20);
-        JButton addOpt = new JButton("Tambah");
-        addOpt.addActionListener(e -> addOption());
-
-        JPanel oPanel = new JPanel();
-        oPanel.add(new JLabel("Opsi:"));
-        oPanel.add(optionField);
-        oPanel.add(addOpt);
-
-        optionsButtonPanel = new JPanel(new GridLayout(0, 1, 5, 5));
-        refreshOptionsButtons();
-
-        p.add(qPanel);
-        p.add(oPanel);
-        p.add(new JScrollPane(optionsButtonPanel));
-        return p;
+        return left;
     }
 
-    private JPanel createResultPanel() {
-        JPanel p = new JPanel(new BorderLayout());
-        p.setBorder(BorderFactory.createTitledBorder("Hasil"));
+    private JPanel createSetupPanel() {
+        JPanel setup = new JPanel(new GridLayout(2, 1, 5, 5));
+        setup.setBorder(BorderFactory.createTitledBorder("Setup & Voting"));
 
-        chartPanel = new ChartPanel(poll);
-        p.add(chartPanel, BorderLayout.NORTH);
+        JPanel qPanel = new JPanel(new BorderLayout(5, 5));
+        qPanel.add(new JLabel("Pertanyaan Polling:"), BorderLayout.WEST);
+        txtQuestion = new JTextField("Masukkan pertanyaan polling");
+        JButton btnUpdate = new JButton("Update");
+        qPanel.add(txtQuestion, BorderLayout.CENTER);
+        qPanel.add(btnUpdate, BorderLayout.EAST);
 
-        tableModel = new DefaultTableModel(
-                new String[]{"No", "Opsi", "Vote", "Persentase"}, 0
-        );
-        table = new JTable(tableModel);
+        btnUpdate.addActionListener(e -> {
+            poll = new Poll(txtQuestion.getText(), options.toArray(new String[0]));
+            chartPanel.setPoll(poll);
+            refreshTable();
+        });
+
+        JPanel addPanel = new JPanel(new BorderLayout(5, 5));
+        addPanel.add(new JLabel("Tambah Opsi Baru:"), BorderLayout.WEST);
+        txtNewOption = new JTextField();
+        JButton btnAdd = new JButton("Tambah");
+        addPanel.add(txtNewOption, BorderLayout.CENTER);
+        addPanel.add(btnAdd, BorderLayout.EAST);
+
+        btnAdd.addActionListener(e -> addOption());
+
+        setup.add(qPanel);
+        setup.add(addPanel);
+
+        return setup;
+    }
+
+    private JPanel createOptionPanel() {
+    JPanel optionPanel = new JPanel(new BorderLayout(5, 5));
+    optionPanel.setBorder(BorderFactory.createTitledBorder("PILIHAN (Klik untuk vote):"));
+
+    panelOptions = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+
+    JLabel emptyLabel = new JLabel("Belum ada opsi. Tambahkan dulu!");
+    emptyLabel.setForeground(Color.GRAY);
+    panelOptions.add(emptyLabel);
+
+    JScrollPane scroll = new JScrollPane(panelOptions);
+    scroll.setPreferredSize(new Dimension(400, 250));
+
+    JButton btnClear = new JButton("Hapus Semua Opsi");
+    btnClear.addActionListener(e -> clearOptions());
+
+    optionPanel.add(scroll, BorderLayout.CENTER);
+    optionPanel.add(btnClear, BorderLayout.SOUTH);
+
+    return optionPanel;
+}
+
+
+    // ================= RIGHT =================
+    private JPanel createRightPanel() {
+    JPanel right = new JPanel(new BorderLayout(5, 5));
+    right.setBorder(BorderFactory.createTitledBorder("Hasil"));
+
+    chartPanel = new ChartPanel(poll);
+    chartPanel.setPreferredSize(new Dimension(500, 220));
+
+    tableModel = new DefaultTableModel(
+            new Object[]{"No", "Opsi", "Jumlah Vote", "Persentase"}, 0);
+    table = new JTable(tableModel);
+
+    right.add(chartPanel, BorderLayout.CENTER);
+    right.add(new JScrollPane(table), BorderLayout.SOUTH);
+
+    return right;
+}
+
+
+    // ================= BOTTOM =================
+    private JPanel createBottomPanel() {
+        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+
+        JButton btnSave = new JButton("Save Polling");
+        JButton btnLoad = new JButton("Load Polling");
+        JButton btnResetMe = new JButton("Reset Vote Saya");
+        JButton btnResetAll = new JButton("Reset Semua Polling");
+
+        btnSave.addActionListener(e -> savePolling());
+        btnLoad.addActionListener(e -> loadPolling());
+        btnResetMe.addActionListener(e -> voter = new Voter("user1"));
+        btnResetAll.addActionListener(e -> resetAll());
+
+        bottom.add(btnSave);
+        bottom.add(btnLoad);
+        bottom.add(btnResetMe);
+        bottom.add(btnResetAll);
+
+        return bottom;
+    }
+
+    // ================= LOGIC =================
+    private void addOption() {
+        String opt = txtNewOption.getText().trim();
+        if (opt.isEmpty()) return;
+
+        options.add(opt);
+        poll.updateOptions(options.toArray(new String[0]));
+        txtNewOption.setText("");
+
+        refreshOptionButtons();
         refreshTable();
-
-        p.add(new JScrollPane(table), BorderLayout.CENTER);
-        return p;
     }
 
-    private JPanel createBottom() {
-        JPanel p = new JPanel();
+private void refreshOptionButtons() {
+    panelOptions.removeAll();
 
-        JButton save = new JButton("Save");
-        JButton load = new JButton("Load");
-        JButton reset = new JButton("Reset Vote");
-
-        save.addActionListener(e -> savePoll());
-        load.addActionListener(e -> loadPoll());
-        reset.addActionListener(e -> voter = new Voter(voter.username));
-
-        p.add(save);
-        p.add(load);
-        p.add(reset);
-        return p;
+    for (int i = 0; i < options.size(); i++) {
+        int idx = i;
+        JButton btn = new JButton(options.get(i));
+        btn.setPreferredSize(new Dimension(120, 30));
+        btn.addActionListener(e -> vote(idx));
+        panelOptions.add(btn);
     }
 
-    private void refreshOptionsButtons() {
-        optionsButtonPanel.removeAll();
+    panelOptions.revalidate();
+    panelOptions.repaint();
+}
 
-        String[] options = poll.getOptions();
-        for (int i = 0; i < options.length; i++) {
-            int idx = i;
-            JButton b = new JButton(options[i]);
-            b.addActionListener(e -> {
-                if (voter.canVote()) {
-                    try {
-                        poll.addVote(idx);
-                        voter.setVoted();
-                        refreshTable();
-                        chartPanel.repaint();
-                    } catch (Exception ignored) {}
-                }
-            });
-            optionsButtonPanel.add(b);
+    private void vote(int index) {
+        if (!voter.canVote()) {
+            JOptionPane.showMessageDialog(this, "Anda sudah vote!");
+            return;
         }
-
-        optionsButtonPanel.revalidate();
-        optionsButtonPanel.repaint();
+        try {
+            poll.addVote(index);
+            voter.setVoted();
+            refreshTable();
+            chartPanel.repaint();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage());
+        }
     }
 
     private void refreshTable() {
         tableModel.setRowCount(0);
         int total = poll.getTotalVotes();
 
-        for (int i = 0; i < poll.getOptions().length; i++) {
+        for (int i = 0; i < options.size(); i++) {
             int v = poll.getVoteCount(i);
-            double p = total > 0 ? (v * 100.0 / total) : 0;
+            double p = total == 0 ? 0 : (v * 100.0 / total);
             tableModel.addRow(new Object[]{
-                    i + 1,
-                    poll.getOptions()[i],
-                    v,
-                    String.format("%.1f%%", p)
+                    i + 1, options.get(i), v, String.format("%.1f%%", p)
             });
         }
     }
 
-    private void updateQuestion() {
-        poll = new Poll(questionField.getText(), poll.getOptions());
-        chartPanel.setPoll(poll);
-    }
-
-    private void addOption() {
-        String o = optionField.getText().trim();
-        if (o.isEmpty()) return;
-
-        String[] old = poll.getOptions();
-        String[] n = new String[old.length + 1];
-        System.arraycopy(old, 0, n, 0, old.length);
-        n[old.length] = o;
-
-        poll.updateOptions(n);
-        refreshOptionsButtons();
+    private void clearOptions() {
+        options.clear();
+        poll.updateOptions(new String[]{});
+        panelOptions.removeAll();
+        panelOptions.add(new JLabel("Belum ada opsi. Tambahkan dulu!"));
         refreshTable();
-        optionField.setText("");
+        chartPanel.repaint();
     }
 
-    private void savePoll() {
-        try {
-            poll.saveToFile(new File("poll.txt"));
-        } catch (IOException ignored) {}
+    private void resetAll() {
+        poll.resetAllVotes();
+        voter = new Voter("user1");
+        refreshTable();
+        chartPanel.repaint();
     }
 
-    private void loadPoll() {
-        try {
-            poll = Poll.loadFromFile(new File("poll.txt"));
-            chartPanel.setPoll(poll);
-            refreshTable();
-            refreshOptionsButtons();
-        } catch (IOException ignored) {}
+    private void savePolling() {
+        JFileChooser fc = new JFileChooser();
+        if (fc.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            try {
+                poll.saveToFile(fc.getSelectedFile());
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, e.getMessage());
+            }
+        }
+    }
+
+    private void loadPolling() {
+        JFileChooser fc = new JFileChooser();
+        if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            try {
+                poll = Poll.loadFromFile(fc.getSelectedFile());
+                options.clear();
+                for (String s : poll.getOptions()) options.add(s);
+                chartPanel.setPoll(poll);
+                refreshOptionButtons();
+                refreshTable();
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, e.getMessage());
+            }
+        }
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(MainApp::new);
+        SwingUtilities.invokeLater(() -> new MainApp().setVisible(true));
     }
 }
