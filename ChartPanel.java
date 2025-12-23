@@ -4,8 +4,7 @@ import java.awt.*;
 public class ChartPanel extends JPanel {
 
     private Poll poll;
-
-    private final Color[] colors = {
+    private Color[] colors = {
         Color.BLUE, Color.RED, Color.GREEN, Color.ORANGE,
         Color.MAGENTA, Color.CYAN, Color.PINK,
         Color.YELLOW, Color.GRAY, Color.DARK_GRAY
@@ -44,14 +43,14 @@ public class ChartPanel extends JPanel {
             int h = poll.getVoteCount(i) * 150 / max;
             g.setColor(colors[i % colors.length]);
             g.fillRect(x, 200 - h, barWidth, h);
-
             g.setColor(Color.BLACK);
-            String label = poll.getOptions()[i];
-            if (label.length() > 8) label = label.substring(0, 8) + "...";
 
-            g.drawString(label, x, 220);
-            g.drawString("" + poll.getVoteCount(i), x + barWidth / 2 - 5, 190 - h);
+            String txt = poll.getOptions()[i];
+            if (txt.length() > 8) txt = txt.substring(0, 8) + "...";
 
+            g.drawString(txt, x, 220);
+            g.drawString("" + poll.getVoteCount(i),
+                    x + barWidth / 2 - 5, 190 - h);
             x += barWidth + 20;
         }
     }
